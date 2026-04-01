@@ -119,15 +119,22 @@ pub fn load(adj_dir: &Path) -> Result<Config> {
             packets.extend(chunk);
         }
 
-        boards.insert(
-            name.clone(),
-            Board {
-                board_id: board_file.board_id,
-                board_ip: board_file.board_ip,
-                measurements,
-                packets,
-            },
+        let board = Board {
+            board_id: board_file.board_id,
+            board_ip: board_file.board_ip,
+            measurements,
+            packets,
+        };
+
+        tracing::info!(
+            board = %name,
+            ip = %board.board_ip,
+            measurements = board.measurements.len(),
+            packets = board.packets.len(),
+            "board loaded"
         );
+
+        boards.insert(name.clone(), board);
     }
 
     Ok(Config {
