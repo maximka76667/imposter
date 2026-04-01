@@ -4,7 +4,4 @@ default_period_ms = 100
 period_ms = 50
 
 [boards.BCU]
-period_ms = 200
-
-[boards.LV-BMS]
-period_ms = 150
+period_ms = 1000

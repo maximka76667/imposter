@@ -235,8 +235,7 @@ A `--dry-run` flag skips alias management entirely for development without root.
 
 Watches the adj config directory and `imposter.toml` with debounce (~300ms). On modification:
 
-- `general_info.json` or `boards.json` changed → shut down entire fleet, tear down all aliases, reload everything, respawn
-- Any board file changed → cancel that board's token, await clean shutdown, re-setup alias if IP changed, respawn just that board
+- Any file under `adj/` changed → shut down entire fleet, tear down all aliases, reload everything, respawn. ADJ is not edited manually — a change means a coordinated config update, so a full restart is always correct.
 - `imposter.toml` changed → reload periods, push new values to running board actors via control channel (no respawn)
 
 ---

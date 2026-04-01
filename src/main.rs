@@ -1,5 +1,6 @@
 mod config;
 mod imposter_cfg;
+mod watcher;
 
 fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt::init();
@@ -11,12 +12,19 @@ fn main() -> anyhow::Result<()> {
     let cfg_path = std::path::Path::new("imposter.toml");
 
     let branch = adj_branch(&adj_dir);
-
     tracing::info!(branch = %branch, "adj config");
 
     let config = config::load(&adj_dir)?;
-    let imposter_cfg = imposter_cfg::load(&cfg_path)?;
 
+    let imposter_cfg = imposter_cfg::load(cfg_path)?;
+    launch_fleet(&config, &imposter_cfg);
+
+    watcher::watch(cfg_path, |cfg| launch_fleet(&config, cfg))?;
+
+    Ok(())
+}
+
+fn launch_fleet(config: &config::Config, imposter_cfg: &imposter_cfg::ImposterCfg) {
     for name in imposter_cfg.boards.keys() {
         if !config.boards.contains_key(name.as_str()) {
             tracing::warn!(board = %name, "unknown board in imposter.toml, ignoring");
@@ -35,7 +43,7 @@ fn main() -> anyhow::Result<()> {
         );
     }
 
-    Ok(())
+    tracing::info!(boards = config.boards.len(), "fleet launched");
 }
 
 fn adj_branch(adj_dir: &std::path::Path) -> String {
