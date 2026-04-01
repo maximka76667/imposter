@@ -31,15 +31,26 @@ fn launch_fleet(config: &config::Config, imposter_cfg: &imposter_cfg::ImposterCf
         }
     }
 
-    for (name, board) in &config.boards {
+    let mut names: Vec<&str> = config.boards.keys().map(String::as_str).collect();
+    names.sort_unstable_by_key(|name| {
+        config.boards[*name]
+            .board_ip
+            .rsplit('.')
+            .next()
+            .and_then(|s| s.parse::<u8>().ok())
+            .unwrap_or(0)
+    });
+
+    for name in names {
+        let board = &config.boards[name];
         tracing::info!(
             id = board.board_id,
-            board = %name,
-            ip = %board.board_ip,
             m = board.measurements.len(),
             p = board.packets.len(),
             period_ms = imposter_cfg.period_ms(name),
-            "board loaded"
+            "> {} » {} -",
+            board.board_ip,
+            name
         );
     }
 
