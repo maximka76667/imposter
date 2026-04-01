@@ -44,13 +44,13 @@ fn launch_fleet(config: &config::Config, imposter_cfg: &imposter_cfg::ImposterCf
     for name in names {
         let board = &config.boards[name];
         tracing::info!(
-            id = board.board_id,
-            m = board.measurements.len(),
-            p = board.packets.len(),
-            period_ms = imposter_cfg.period_ms(name),
-            "> {} » {} -",
+            "> {} » {} - id: {} | measurements: {} | packets: {} | period: {}ms",
             board.board_ip,
-            name
+            name,
+            board.board_id,
+            board.measurements.len(),
+            board.packets.len(),
+            imposter_cfg.period_ms(name),
         );
     }
 
