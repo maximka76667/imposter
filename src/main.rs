@@ -3,6 +3,11 @@ mod imposter_cfg;
 mod watcher;
 
 fn main() -> anyhow::Result<()> {
+    println!();
+    println!("╷╭┬╮╭─╮╭─╮╭─╮╶┬╴╭─╴╭─╮");
+    println!("││││├─╯│ │╰─╮ │ ├╴ ├┬╯");
+    println!("╵╵ ╵╵  ╰─╯╰─╯ ╵ ╰─╴╵╰╴");
+    println!();
     tracing_subscriber::fmt::init();
 
     let base_dir = dirs::cache_dir()
