@@ -126,14 +126,6 @@ pub fn load(adj_dir: &Path) -> Result<Config> {
             packets,
         };
 
-        tracing::info!(
-            board = %name,
-            ip = %board.board_ip,
-            measurements = board.measurements.len(),
-            packets = board.packets.len(),
-            "board loaded"
-        );
-
         boards.insert(name.clone(), board);
     }
 

@@ -173,14 +173,15 @@ In dev: `imposter --adj ./adj --config ./imposter.toml`. In production: no flags
 
 ```
 1. Parse CLI flags
-2. Load + parse general_info.json         → hard fault if malformed
-3. Load + parse boards.json               → hard fault if malformed
-4. For each board, load all referenced files → hard fault if any malformed
-5. Load imposter.toml                     → hard fault if malformed
-6. Setup network aliases (netsetup/)      → hard fault if privileges missing
-7. Spawn board actors (one per board)
-8. Start filesystem watcher (adj/ + imposter.toml)
-9. Enter supervisor loop — REPL or CLI one-shot
+2. Read adj git branch → log it (requires no git installation, uses libgit2)
+3. Load + parse general_info.json         → hard fault if malformed
+4. Load + parse boards.json               → hard fault if malformed
+5. For each board, load all referenced files → hard fault if any malformed
+6. Load imposter.toml                     → hard fault if malformed
+7. Setup network aliases (netsetup/)      → hard fault if privileges missing
+8. Spawn board actors (one per board)
+9. Start filesystem watcher (adj/ + imposter.toml)
+10. Enter supervisor loop — REPL or CLI one-shot
 ```
 
 ---
