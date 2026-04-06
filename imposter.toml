@@ -1,7 +1,14 @@
-default_period_ms = 100
+default_period_ms = 1000
+default_enable_udp = true
+default_enable_tcp = false
+
+# Show debugging info
+verbose = false
 
 [boards.VCU]
-period_ms = 50
+period_ms = 200
+enable_udp = true
 
 [boards.BCU]
-period_ms = 1000
+period_ms = 500
+enable_udp = false

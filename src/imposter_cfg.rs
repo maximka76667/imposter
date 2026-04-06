@@ -4,14 +4,32 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Deserialize)]
 pub struct BoardCfg {
-    pub period_ms: u64,
+    pub period_ms: Option<u64>,
+    #[serde(rename = "enable_udp")]
+    pub udp: Option<bool>,
+    #[serde(rename = "enable_tcp")]
+    pub tcp: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct ImposterCfg {
     pub default_period_ms: u64,
+    #[serde(rename = "enable_udp")]
+    pub udp: Option<bool>,
+    #[serde(rename = "enable_tcp")]
+    pub tcp: Option<bool>,
+    #[serde(default = "default_true", rename = "default_enable_udp")]
+    pub default_udp: bool,
+    #[serde(default = "default_true", rename = "default_enable_tcp")]
+    pub default_tcp: bool,
+    #[serde(default)]
+    pub verbose: bool,
     #[serde(default)]
     pub boards: HashMap<String, BoardCfg>,
 }
@@ -20,8 +38,28 @@ impl ImposterCfg {
     pub fn period_ms(&self, board_name: &str) -> u64 {
         self.boards
             .get(board_name)
-            .map(|b| b.period_ms)
+            .and_then(|b| b.period_ms)
             .unwrap_or(self.default_period_ms)
+    }
+
+    pub fn udp_enabled(&self, board_name: &str) -> bool {
+        if let Some(global) = self.udp {
+            return global;
+        }
+        self.boards
+            .get(board_name)
+            .and_then(|b| b.udp)
+            .unwrap_or(self.default_udp)
+    }
+
+    pub fn tcp_enabled(&self, board_name: &str) -> bool {
+        if let Some(global) = self.tcp {
+            return global;
+        }
+        self.boards
+            .get(board_name)
+            .and_then(|b| b.tcp)
+            .unwrap_or(self.default_tcp)
     }
 }
 

@@ -41,15 +41,23 @@ adj/
 
 ```toml
 default_period_ms = 100
+enable_udp = false         # global kill-switch — overrides all per-board settings
+enable_tcp = true
+default_enable_udp = true  # per-board default when not explicitly set
+default_enable_tcp = true
 
 [boards.VCU]
 period_ms = 100
+enable_tcp = false         # UDP only
 
 [boards.BCU]
 period_ms = 200
+enable_udp = false         # TCP only
 ```
 
-Watched live — changes are applied to running board actors without respawn. Board names are matched dynamically against `boards.json` — unknown names in `imposter.toml` are ignored, boards with no entry fall back to `default_period_ms`.
+`enable_udp` / `enable_tcp` at the top level are global kill-switches — if set, they override all per-board settings. `default_enable_udp` / `default_enable_tcp` are the fallback for boards that don't specify their own value. A board with both disabled starts but does nothing.
+
+Watched live — changes are applied to running board actors without respawn. Board names are matched dynamically against `boards.json` — unknown names in `imposter.toml` are ignored, boards with no entry fall back to `default_period_ms` / `default_enable_udp` / `default_enable_tcp`.
 
 ---
 
@@ -164,6 +172,10 @@ imposter.toml (separate, live-watched)
 | `--config <path>` | `<adj-parent>/imposter.toml`                    | Path to imposter config file                |
 | `--dry-run`       | false                                           | Skip network alias setup (no root required) |
 | `--interactive`   | false                                           | Drop into REPL after one-shot commands      |
+
+--mode (burst / steady / random / precision)
+--rate packets/sec
+--count total packets to send
 
 In dev: `imposter --adj ./adj --config ./imposter.toml`. In production: no flags needed.
 

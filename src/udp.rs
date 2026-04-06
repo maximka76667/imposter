@@ -1,36 +1,42 @@
 use std::collections::HashMap;
-use std::net::{SocketAddr, UdpSocket};
+use std::net::SocketAddr;
 
 use anyhow::{Context, Result};
+use tokio::net::UdpSocket;
 
-use crate::config::{Board, Measurement, MeasurementType, Packet, PacketType};
+use crate::config::{Board, MeasurementType, Packet, PacketType};
 
-pub fn bind(board: &Board) -> Result<UdpSocket> {
-    let addr = format!("{}:0", board.board_ip);
-    UdpSocket::bind(&addr).with_context(|| format!("binding UDP to {}", addr))
+pub async fn bind(board_ip: &str) -> Result<UdpSocket> {
+    let addr = format!("{}:0", board_ip);
+    UdpSocket::bind(&addr)
+        .await
+        .with_context(|| format!("binding UDP to {}", addr))
 }
 
-pub fn send(
+pub async fn send(
     socket: &UdpSocket,
-    packet: &Packet,
-    measurements: &HashMap<&str, &Measurement>,
+    packet_id: u32,
+    variables: &[String],
+    measurements: &HashMap<String, MeasurementType>,
     dest: SocketAddr,
+    board: &str,
 ) -> Result<()> {
     let mut buf = Vec::new();
 
-    buf.extend_from_slice(&(packet.id as u16).to_le_bytes());
+    buf.extend_from_slice(&(packet_id as u16).to_le_bytes());
 
-    for var_id in &packet.variables {
-        let measurement = measurements
+    for var_id in variables {
+        let kind = measurements
             .get(var_id.as_str())
             .with_context(|| format!("unknown variable '{}'", var_id))?;
-        write_zero(&mut buf, &measurement.kind);
+        write_zero(&mut buf, kind);
     }
 
     socket
         .send_to(&buf, dest)
-        .with_context(|| format!("sending packet {} to {}", packet.id, dest))?;
-    tracing::debug!(packet_id = packet.id, bytes = buf.len(), dest = %dest, "sent");
+        .await
+        .with_context(|| format!("sending packet {} to {}", packet_id, dest))?;
+    tracing::debug!(board, packet_id, dest = %dest, "sent");
 
     Ok(())
 }
@@ -55,11 +61,11 @@ fn write_zero(buf: &mut Vec<u8>, kind: &MeasurementType) {
     }
 }
 
-pub fn measurement_map<'a>(board: &'a Board) -> HashMap<&'a str, &'a Measurement> {
+pub fn measurement_map(board: &Board) -> HashMap<String, MeasurementType> {
     board
         .measurements
         .iter()
-        .map(|m| (m.id.as_str(), m))
+        .map(|m| (m.id.clone(), m.kind.clone()))
         .collect()
 }
 
