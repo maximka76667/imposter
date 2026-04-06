@@ -3,7 +3,9 @@ default_enable_udp = true
 default_enable_tcp = false
 
 mode = "random"
-random_step = 0.05
+
+# Random mode variation step
+random_step = 0.1
 
 # Show debugging info
 verbose = false
@@ -15,3 +17,6 @@ enable_udp = true
 [boards.BCU]
 period_ms = 500
 enable_udp = false
+
+[boards.HVSCU-Cabinet]
+period_ms = 300

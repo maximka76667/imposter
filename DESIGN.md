@@ -171,11 +171,6 @@ imposter.toml (separate, live-watched)
 | `--adj <path>`    | `os.userCacheDir/hyperloop-control-station/adj` | Path to ADJ config directory                |
 | `--config <path>` | `<adj-parent>/imposter.toml`                    | Path to imposter config file                |
 | `--dry-run`       | false                                           | Skip network alias setup (no root required) |
-| `--interactive`   | false                                           | Drop into REPL after one-shot commands      |
-
---mode (burst / steady / random / precision)
---rate packets/sec
---count total packets to send
 
 In dev: `imposter --adj ./adj --config ./imposter.toml`. In production: no flags needed.
 
@@ -193,7 +188,7 @@ In dev: `imposter --adj ./adj --config ./imposter.toml`. In production: no flags
 7. Setup network aliases (netsetup/)      → hard fault if privileges missing
 8. Spawn board actors (one per board)
 9. Start filesystem watcher (adj/ + imposter.toml)
-10. Enter supervisor loop — REPL or CLI one-shot
+10. Enter supervisor loop — wait for ctrl_c
 ```
 
 ---
@@ -211,7 +206,7 @@ Three concurrent things running independently inside each board's task:
 
 When the client disconnects, reader and writer die, alert sender becomes None, listener goes back to waiting. UDP is completely unaffected by TCP client state.
 
-**Control receiver** — select!s alongside the tick loop and TCP listener. Receives commands from the control plane — period updates (from live imposter.toml reload), manual violation triggers, pause, status queries.
+**Control receiver** — select!s alongside the tick loop and TCP listener. Receives commands from the watcher — period updates, mode/step changes, enable/disable UDP/TCP.
 
 ---
 
@@ -239,7 +234,7 @@ Three platform implementations behind a common trait:
 - macOS — `ifconfig`
 - Windows — `netsh`
 
-A `--dry-run` flag skips alias management entirely for development without root.
+The `--dry-run` flag skips alias management entirely for development without root.
 
 ---
 
@@ -249,14 +244,6 @@ Watches the adj config directory and `imposter.toml` with debounce (~300ms). On 
 
 - Any file under `adj/` changed → shut down entire fleet, tear down all aliases, reload everything, respawn. ADJ is not edited manually — a change means a coordinated config update, so a full restart is always correct.
 - `imposter.toml` changed → reload periods, push new values to running board actors via control channel (no respawn)
-
----
-
-## Control plane
-
-The same `Command` enum is produced by both CLI flags (parsed at startup, executed once) and the interactive REPL (running continuously). Both paths call methods on `BoardHandle`.
-
-After one-shot CLI commands execute, the process either exits or drops into the REPL depending on whether `--interactive` was passed.
 
 ---
 
@@ -280,7 +267,6 @@ src/
   tcp.rs           ← listener, split stream, reader + writer tasks
   protocol.rs      ← OutboundMsg, InboundCmd, wire framing (newline JSON)
   alert.rs         ← RangeViolation builder
-  control.rs       ← BoardHandle commands, REPL, CLI dispatch
   watcher.rs       ← notify watcher, debounce, reload signals
   netsetup/
     mod.rs         ← AliasManager trait, factory, privilege check
@@ -315,5 +301,4 @@ Build order:
 6. Multi-board        — spawn N actors, prove isolation works
 7. netsetup           — network aliases, platform implementations
 8. watcher            — filesystem watcher, reload logic (adj + imposter.toml)
-9. control plane      — REPL, CLI dispatch, BoardHandle commands
 ```
