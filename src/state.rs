@@ -107,6 +107,120 @@ fn initial_value(spec: &MeasurementSpec, mode: &SimMode, rng: &mut impl rand::Rn
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn float_spec(id: &str, range: Option<[f64; 2]>) -> MeasurementSpec {
+        MeasurementSpec {
+            id: id.to_string(),
+            kind: MeasurementType::Float32,
+            range,
+            enum_count: 0,
+            random_step: 0.1,
+        }
+    }
+
+    fn enum_spec(id: &str, count: usize) -> MeasurementSpec {
+        MeasurementSpec {
+            id: id.to_string(),
+            kind: MeasurementType::Enum,
+            range: None,
+            enum_count: count,
+            random_step: 0.1,
+        }
+    }
+
+    fn bool_spec(id: &str) -> MeasurementSpec {
+        MeasurementSpec {
+            id: id.to_string(),
+            kind: MeasurementType::Bool,
+            range: None,
+            enum_count: 0,
+            random_step: 0.1,
+        }
+    }
+
+    #[test]
+    fn random_mode_starts_at_midpoint() {
+        let specs = vec![float_spec("v", Some([0.0, 100.0]))];
+        let state = MeasurementState::new(&specs, &SimMode::Random);
+        let (val, _) = state.get("v").unwrap();
+        assert_eq!(val, 50.0);
+    }
+
+    #[test]
+    fn stable_mode_starts_within_range() {
+        let specs = vec![float_spec("v", Some([0.0, 100.0]))];
+        let state = MeasurementState::new(&specs, &SimMode::Stable);
+        let (val, _) = state.get("v").unwrap();
+        assert!(val >= 0.0 && val <= 100.0);
+    }
+
+    #[test]
+    fn random_tick_changes_values() {
+        let specs = vec![float_spec("v", Some([0.0, 100.0]))];
+        let mut state = MeasurementState::new(&specs, &SimMode::Random);
+        let (initial, _) = state.get("v").unwrap();
+        let mut changed = false;
+        for _ in 0..100 {
+            state.tick(&specs, &SimMode::Random);
+            let (val, _) = state.get("v").unwrap();
+            if (val - initial).abs() > 1e-10 {
+                changed = true;
+                break;
+            }
+        }
+        assert!(changed, "value never changed after 100 random ticks");
+    }
+
+    #[test]
+    fn stable_tick_never_changes() {
+        let specs = vec![float_spec("v", Some([0.0, 100.0]))];
+        let mut state = MeasurementState::new(&specs, &SimMode::Stable);
+        let (initial, _) = state.get("v").unwrap();
+        for _ in 0..20 {
+            state.tick(&specs, &SimMode::Stable);
+        }
+        let (val, _) = state.get("v").unwrap();
+        assert_eq!(val, initial);
+    }
+
+    #[test]
+    fn random_walk_clamps_to_range() {
+        let specs = vec![float_spec("v", Some([10.0, 20.0]))];
+        let mut state = MeasurementState::new(&specs, &SimMode::Random);
+        for _ in 0..1000 {
+            state.tick(&specs, &SimMode::Random);
+            let (val, _) = state.get("v").unwrap();
+            assert!(val >= 10.0 && val <= 20.0, "value {val} out of range");
+        }
+    }
+
+    #[test]
+    fn bool_tick_is_zero_or_one() {
+        let specs = vec![bool_spec("b")];
+        let mut state = MeasurementState::new(&specs, &SimMode::Random);
+        for _ in 0..50 {
+            state.tick(&specs, &SimMode::Random);
+            let (val, _) = state.get("b").unwrap();
+            assert!(val == 0.0 || val == 1.0, "Bool value {val} is not 0 or 1");
+        }
+    }
+
+    #[test]
+    fn enum_tick_within_count_and_integer() {
+        let specs = vec![enum_spec("e", 5)];
+        let mut state = MeasurementState::new(&specs, &SimMode::Random);
+        for _ in 0..50 {
+            state.tick(&specs, &SimMode::Random);
+            let (val, _) = state.get("e").unwrap();
+            assert!(val >= 0.0 && val < 5.0, "Enum value {val} out of range");
+            assert_eq!(val, val.floor(), "Enum value {val} is not an integer");
+        }
+    }
+}
+
 fn effective_range(kind: &MeasurementType, range: Option<[f64; 2]>) -> [f64; 2] {
     if let Some(r) = range {
         return r;

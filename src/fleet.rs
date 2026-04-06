@@ -86,6 +86,75 @@ fn data_packets(board: &Board) -> impl Iterator<Item = &Packet> {
         .filter(|p| matches!(p.kind, PacketType::Data))
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{Measurement, MeasurementType, Packet, PacketType};
+
+    fn make_board() -> Board {
+        Board {
+            board_id: 1,
+            board_ip: "127.0.0.1".to_string(),
+            measurements: vec![
+                Measurement {
+                    id: "pressure".to_string(),
+                    name: "Pressure".to_string(),
+                    kind: MeasurementType::Float32,
+                    safe_range: Some([0.0, 100.0]),
+                    warning_range: None,
+                    enum_values: None,
+                    pod_units: None,
+                    display_units: None,
+                },
+            ],
+            packets: vec![
+                Packet { id: 1, kind: PacketType::Data, name: "d".to_string(), variables: vec!["pressure".to_string()] },
+                Packet { id: 2, kind: PacketType::Order, name: "o".to_string(), variables: vec![] },
+            ],
+        }
+    }
+
+    #[test]
+    fn measurement_specs_builds_correctly() {
+        let board = make_board();
+        let specs = measurement_specs(&board, 0.02);
+        assert_eq!(specs.len(), 1);
+        assert_eq!(specs[0].id, "pressure");
+        assert_eq!(specs[0].range, Some([0.0, 100.0]));
+        assert_eq!(specs[0].random_step, 0.02);
+        assert_eq!(specs[0].enum_count, 0);
+    }
+
+    #[test]
+    fn data_packets_filters_orders() {
+        let board = make_board();
+        let pkts: Vec<_> = data_packets(&board).collect();
+        assert_eq!(pkts.len(), 1);
+        assert_eq!(pkts[0].id, 1);
+    }
+
+    #[test]
+    fn measurement_specs_uses_warning_range_as_fallback() {
+        let board = Board {
+            board_id: 1,
+            board_ip: "127.0.0.1".to_string(),
+            measurements: vec![Measurement {
+                id: "temp".to_string(),
+                name: "Temp".to_string(),
+                kind: MeasurementType::Float32,
+                safe_range: None,
+                warning_range: Some([50.0, 90.0]),
+                enum_values: None,
+                pod_units: None,
+                display_units: None,
+            }],
+            packets: vec![],
+        };
+        let specs = measurement_specs(&board, 0.02);
+        assert_eq!(specs[0].range, Some([50.0, 90.0]));
+    }
+}
+
 fn backend_dest(config: &Config) -> anyhow::Result<SocketAddr> {
     let backend_ip = config
         .general_info

@@ -85,3 +85,58 @@ pub struct Config {
     pub general_info: GeneralInfo,
     pub boards: HashMap<String, Board>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_float_measurement() {
+        let m: Measurement = serde_json::from_str(r#"{
+            "id": "brake_pressure",
+            "name": "Brake Pressure",
+            "type": "float32",
+            "safeRange": [0.0, 100.0]
+        }"#).unwrap();
+        assert_eq!(m.id, "brake_pressure");
+        assert!(matches!(m.kind, MeasurementType::Float32));
+        assert_eq!(m.safe_range, Some([0.0, 100.0]));
+        assert!(m.warning_range.is_none());
+    }
+
+    #[test]
+    fn parse_enum_measurement() {
+        let m: Measurement = serde_json::from_str(r#"{
+            "id": "state",
+            "name": "State",
+            "type": "enum",
+            "enumValues": ["idle", "running", "error"]
+        }"#).unwrap();
+        assert!(matches!(m.kind, MeasurementType::Enum));
+        assert_eq!(m.enum_values.unwrap().len(), 3);
+    }
+
+    #[test]
+    fn parse_data_packet() {
+        let p: Packet = serde_json::from_str(r#"{
+            "id": 249,
+            "type": "data",
+            "name": "Current State",
+            "variables": ["brake_pressure", "state"]
+        }"#).unwrap();
+        assert_eq!(p.id, 249);
+        assert!(matches!(p.kind, PacketType::Data));
+        assert_eq!(p.variables.len(), 2);
+    }
+
+    #[test]
+    fn parse_order_packet_empty_variables() {
+        let p: Packet = serde_json::from_str(r#"{
+            "id": 502,
+            "type": "order",
+            "name": "Turn on PFM"
+        }"#).unwrap();
+        assert!(matches!(p.kind, PacketType::Order));
+        assert!(p.variables.is_empty());
+    }
+}

@@ -73,6 +73,56 @@ impl ImposterCfg {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(toml: &str) -> ImposterCfg {
+        toml::from_str(toml).unwrap()
+    }
+
+    #[test]
+    fn period_falls_back_to_default() {
+        let cfg = parse("default_period_ms = 100");
+        assert_eq!(cfg.period_ms("VCU"), 100);
+    }
+
+    #[test]
+    fn period_uses_board_value() {
+        let cfg = parse("default_period_ms = 100\n[boards.VCU]\nperiod_ms = 50");
+        assert_eq!(cfg.period_ms("VCU"), 50);
+        assert_eq!(cfg.period_ms("BCU"), 100);
+    }
+
+    #[test]
+    fn defaults_are_true() {
+        let cfg = parse("default_period_ms = 100");
+        assert!(cfg.udp_enabled("any"));
+        assert!(cfg.tcp_enabled("any"));
+    }
+
+    #[test]
+    fn global_enable_udp_overrides_all() {
+        let cfg = parse("default_period_ms = 100\nenable_udp = false\n[boards.VCU]\nenable_udp = true");
+        assert!(!cfg.udp_enabled("VCU"));
+        assert!(!cfg.udp_enabled("BCU"));
+    }
+
+    #[test]
+    fn per_board_enable_udp_overrides_default() {
+        let cfg = parse("default_period_ms = 100\n[boards.VCU]\nenable_udp = false");
+        assert!(!cfg.udp_enabled("VCU"));
+        assert!(cfg.udp_enabled("BCU"));
+    }
+
+    #[test]
+    fn global_tcp_kill_switch() {
+        let cfg = parse("default_period_ms = 100\nenable_tcp = false");
+        assert!(!cfg.tcp_enabled("VCU"));
+        assert!(!cfg.tcp_enabled("BCU"));
+    }
+}
+
 pub fn load(path: &Path) -> Result<ImposterCfg> {
     let text =
         std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
