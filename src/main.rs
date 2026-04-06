@@ -3,6 +3,7 @@ mod config;
 mod fleet;
 mod imposter_cfg;
 mod simulator;
+mod state;
 mod udp;
 mod watcher;
 
@@ -50,6 +51,8 @@ async fn main() -> anyhow::Result<()> {
             handle.set_period(cfg.period_ms(&handle.name));
             handle.set_udp(cfg.udp_enabled(&handle.name));
             handle.set_tcp(cfg.tcp_enabled(&handle.name));
+            handle.set_mode(cfg.mode.clone());
+            handle.set_random_step(cfg.random_step);
         }
 
         tracing::info!("imposter.toml reloaded");

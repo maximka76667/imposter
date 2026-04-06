@@ -2,6 +2,9 @@ default_period_ms = 1000
 default_enable_udp = true
 default_enable_tcp = false
 
+mode = "random"
+random_step = 0.05
+
 # Show debugging info
 verbose = false
 

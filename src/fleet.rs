@@ -3,9 +3,9 @@ use std::net::SocketAddr;
 use anyhow::Context;
 
 use crate::board::{self, BoardHandle};
-use crate::config::Config;
+use crate::config::{Board, Config, Packet, PacketType};
 use crate::imposter_cfg::ImposterCfg;
-use crate::udp;
+use crate::state::MeasurementSpec;
 
 pub fn launch(config: &Config, imposter_cfg: &ImposterCfg) -> anyhow::Result<Vec<BoardHandle>> {
     for name in imposter_cfg.boards.keys() {
@@ -49,24 +49,41 @@ pub fn launch(config: &Config, imposter_cfg: &ImposterCfg) -> anyhow::Result<Vec
 
     for name in &names {
         let board = &config.boards[*name];
-        let board_ip = board.board_ip.clone();
-        let measurements = udp::measurement_map(board);
-        let data_packets: Vec<(u32, Vec<String>)> = udp::data_packets(board)
-            .map(|p| (p.id, p.variables.clone()))
-            .collect();
 
         handles.push(board::spawn(
             name.to_string(),
-            board_ip,
+            board.board_ip.clone(),
             imposter_cfg.period_ms(name),
             imposter_cfg.udp_enabled(name),
-            measurements,
-            data_packets,
+            measurement_specs(board, imposter_cfg.random_step),
+            data_packets(board).map(|p| (p.id, p.variables.clone())).collect(),
             dest,
+            imposter_cfg.mode.clone(),
         ));
     }
 
     Ok(handles)
+}
+
+fn measurement_specs(board: &Board, random_step: f64) -> Vec<MeasurementSpec> {
+    board
+        .measurements
+        .iter()
+        .map(|m| MeasurementSpec {
+            id: m.id.clone(),
+            kind: m.kind.clone(),
+            range: m.safe_range.or(m.warning_range),
+            enum_count: m.enum_values.as_ref().map_or(0, |v| v.len()),
+            random_step,
+        })
+        .collect()
+}
+
+fn data_packets(board: &Board) -> impl Iterator<Item = &Packet> {
+    board
+        .packets
+        .iter()
+        .filter(|p| matches!(p.kind, PacketType::Data))
 }
 
 fn backend_dest(config: &Config) -> anyhow::Result<SocketAddr> {

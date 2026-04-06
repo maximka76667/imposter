@@ -4,8 +4,14 @@ use std::path::Path;
 use anyhow::{Context, Result};
 use serde::Deserialize;
 
+use crate::state::SimMode;
+
 fn default_true() -> bool {
     true
+}
+
+fn default_random_step() -> f64 {
+    0.02
 }
 
 #[derive(Debug, Deserialize)]
@@ -30,6 +36,10 @@ pub struct ImposterCfg {
     pub default_tcp: bool,
     #[serde(default)]
     pub verbose: bool,
+    #[serde(default)]
+    pub mode: SimMode,
+    #[serde(default = "default_random_step")]
+    pub random_step: f64,
     #[serde(default)]
     pub boards: HashMap<String, BoardCfg>,
 }
