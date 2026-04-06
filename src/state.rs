@@ -226,7 +226,7 @@ fn effective_range(kind: &MeasurementType, range: Option<[f64; 2]>) -> [f64; 2] 
         return r;
     }
     match kind {
-        MeasurementType::Float32 | MeasurementType::Float64 => [-100.0, 100.0],
+        MeasurementType::Float32 | MeasurementType::Float64 => [-200.0, 1000.0],
         MeasurementType::Uint8 => [0.0, 255.0],
         MeasurementType::Int8 => [-128.0, 127.0],
         MeasurementType::Uint16 => [0.0, 1000.0],
