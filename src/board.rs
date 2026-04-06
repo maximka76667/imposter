@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{self, error::TrySendError};
 
 use crate::simulator;
 use crate::state::{MeasurementSpec, SimMode};
@@ -20,23 +20,35 @@ pub struct BoardHandle {
 
 impl BoardHandle {
     pub fn set_period(&self, ms: u64) {
-        let _ = self.ctrl_tx.try_send(Command::SetPeriod(ms));
+        self.send(Command::SetPeriod(ms));
     }
 
     pub fn set_udp(&self, enabled: bool) {
-        let _ = self.ctrl_tx.try_send(Command::SetUdp(enabled));
+        self.send(Command::SetUdp(enabled));
     }
 
     pub fn set_tcp(&self, enabled: bool) {
-        let _ = self.ctrl_tx.try_send(Command::SetTcp(enabled));
+        self.send(Command::SetTcp(enabled));
     }
 
     pub fn set_mode(&self, mode: SimMode) {
-        let _ = self.ctrl_tx.try_send(Command::SetMode(mode));
+        self.send(Command::SetMode(mode));
     }
 
     pub fn set_random_step(&self, step: f64) {
-        let _ = self.ctrl_tx.try_send(Command::SetRandomStep(step));
+        self.send(Command::SetRandomStep(step));
+    }
+
+    fn send(&self, cmd: Command) {
+        match self.ctrl_tx.try_send(cmd) {
+            Ok(()) => {}
+            Err(TrySendError::Full(_)) => {
+                tracing::warn!(board = %self.name, "control channel full, command dropped");
+            }
+            Err(TrySendError::Closed(_)) => {
+                tracing::error!(board = %self.name, "board task is dead");
+            }
+        }
     }
 }
 
